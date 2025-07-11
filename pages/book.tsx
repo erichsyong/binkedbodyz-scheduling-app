@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
 import { useSession } from 'next-auth/react'
+import { supabase } from '../lib/supabase'
+
+type Availability = {
+  id: number
+  day_of_week: number
+  start_time: string
+  end_time: string
+}
 
 export default function Book() {
-  const [availability, setAvailability] = useState<any[]>([])
-  const [selectedSlot, setSelectedSlot] = useState<any>(null)
+  const [availability, setAvailability] = useState<Availability[]>([])
+  const [selectedSlot, setSelectedSlot] = useState<Availability | null>(null)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -27,7 +34,7 @@ export default function Book() {
     if (error) {
       alert('Failed to load availability: ' + error.message)
     } else {
-      setAvailability(data)
+      setAvailability(data as Availability[])
     }
   }
 
@@ -55,7 +62,6 @@ export default function Book() {
     end.setMinutes(parseInt(em))
 
     setLoading(true)
-
     const { error } = await supabase.from('bookings').insert([
       {
         name,
@@ -66,16 +72,15 @@ export default function Book() {
         end_time: end.toISOString(),
       },
     ])
+    setLoading(false)
 
     if (error) {
-      setLoading(false)
       alert('Booking failed: ' + error.message)
-      return
-    }
+    } else {
+      alert('Booking confirmed! 🎉')
 
-    // Create Google Calendar event if signed in
-    if (session?.accessToken) {
-      try {
+      // Google Calendar API call (if logged in with Google)
+      if (session?.accessToken) {
         await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
           method: 'POST',
           headers: {
@@ -84,10 +89,10 @@ export default function Book() {
           },
           body: JSON.stringify({
             summary: 'New Booking',
-            description: `Booked by ${name} (${email})${instagram ? `, IG: ${instagram}` : ''}`,
+            description: `Booked by ${name} (${email})`,
             start: {
               dateTime: start.toISOString(),
-              timeZone: 'America/Los_Angeles', // adjust if needed
+              timeZone: 'America/Los_Angeles',
             },
             end: {
               dateTime: end.toISOString(),
@@ -95,18 +100,15 @@ export default function Book() {
             },
           }),
         })
-      } catch (calendarError) {
-        console.error('Calendar event creation failed', calendarError)
       }
-    }
 
-    setLoading(false)
-    alert('Booking confirmed! 🎉')
-    setName('')
-    setEmail('')
-    setPhone('')
-    setInstagram('')
-    setSelectedSlot(null)
+      // Reset form
+      setName('')
+      setEmail('')
+      setPhone('')
+      setInstagram('')
+      setSelectedSlot(null)
+    }
   }
 
   return (

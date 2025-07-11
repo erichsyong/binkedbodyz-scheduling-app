@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+type Availability = {
+  id: number
+  day_of_week: number
+  start_time: string
+  end_time: string
+}
+
 export default function Admin() {
-  const [availability, setAvailability] = useState<any[]>([])
+  const [availability, setAvailability] = useState<Availability[]>([])
   const [dayOfWeek, setDayOfWeek] = useState(1)
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
@@ -20,7 +27,7 @@ export default function Admin() {
     if (error) {
       console.error('Error fetching availability:', error)
     } else {
-      setAvailability(data)
+      setAvailability(data as Availability[])
     }
   }
 
@@ -47,7 +54,7 @@ export default function Admin() {
     }
   }
 
-  async function deleteAvailability(id: string) {
+  async function deleteAvailability(id: number) {
     const { error } = await supabase.from('availability').delete().eq('id', id)
     if (error) {
       alert('Error deleting availability: ' + error.message)
