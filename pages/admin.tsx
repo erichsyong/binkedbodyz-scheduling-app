@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { useSession } from 'next-auth/react'
 
 type Availability = {
   id: number
@@ -9,14 +10,28 @@ type Availability = {
 }
 
 export default function Admin() {
+  const { data: session } = useSession()
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      },
+    }
+  )
+
   const [availability, setAvailability] = useState<Availability[]>([])
   const [dayOfWeek, setDayOfWeek] = useState(1)
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
 
   useEffect(() => {
-    fetchAvailability()
-  }, [])
+    if (session?.accessToken) fetchAvailability()
+  }, [session])
 
   async function fetchAvailability() {
     const { data, error } = await supabase
